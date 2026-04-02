@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#020c18">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Gluconova — Dashboard</title>
+<link rel="manifest" href="manifest.json">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --ink: #020c18; --ink2: #061426; --ink3: #0c2240;
+  --glass: rgba(6,20,38,0.75); --glass2: rgba(12,34,64,0.6);
+  --lime: #a8ff3e; --lime2: #7fd420; --cyan: #3efff8;
+  --border: rgba(168,255,62,0.1); --border2: rgba(168,255,62,0.18);
+  --text: #d4ecc8; --muted: #3d6050;
+  --danger: #ff5c5c; --warn: #ffb84d; --info: #3efff8;
+}
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Syne', sans-serif;
+  background: var(--ink); color: var(--text);
+  min-height: 100vh; display: flex; overflow-x: hidden;
+}
+.bg-gradient {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 70% 50% at -5% 100%, rgba(168,255,62,0.06) 0%, transparent 55%),
+    radial-gradient(ellipse 50% 40% at 105% 0%, rgba(62,255,248,0.04) 0%, transparent 50%),
+    var(--ink);
+}
+.bg-dots {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(168,255,62,0.06) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 220px; min-height: 100vh; background: rgba(6,20,38,0.95);
+  border-right: 1px solid var(--border); padding: 24px 14px;
+  position: fixed; left: 0; top: 0; bottom: 0; z-index: 100;
+  display: flex; flex-direction: column; backdrop-filter: blur(20px);
+  transition: transform 0.3s;
+}
+.sidebar-logo { display: flex; align-items: center; gap: 11px; padding: 0 8px; margin-bottom: 36px; }
+.logo-icon {
+  width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--lime), var(--cyan));
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 20px rgba(168,255,62,0.2);
+}
+.sidebar-logo h2 { font-size: 17px; font-weight: 800; letter-spacing: -0.5px; }
+.sidebar-logo h2 span { color: var(--lime); }
+
+.nav-section { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); padding: 0 10px; margin: 20px 0 6px; }
+.nav-link {
+  display: flex; align-items: center; gap: 11px; padding: 10px 10px;
+  border-radius: 10px; color: var(--muted); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.2s; margin-bottom: 2px; text-decoration: none;
+  border: 1px solid transparent;
+}
+.nav-link:hover { color: var(--text); background: rgba(168,255,62,0.05); }
+.nav-link.active { color: var(--lime); background: rgba(168,255,62,0.08); border-color: rgba(168,255,62,0.15); }
+
+.sidebar-bottom { margin-top: auto; }
+.user-pill {
+  background: var(--glass2); border: 1px solid var(--border);
+  border-radius: 12px; padding: 11px 12px;
+  display: flex; align-items: center; gap: 9px;
+}
+.avatar {
+  width: 34px; height: 34px; border-radius: 50%; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--lime), var(--cyan));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 800; color: var(--ink);
+}
+.user-name { font-size: 13px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-sub { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--muted); }
+.logout-btn {
+  margin-left: auto; background: none; border: none; color: var(--muted);
+  cursor: pointer; padding: 4px; border-radius: 6px; flex-shrink: 0;
+  transition: color 0.2s;
+}
+.logout-btn:hover { color: var(--danger); }
+
+/* ── Main ── */
+.main { margin-left: 220px; flex: 1; padding: 28px 28px 40px; min-height: 100vh; position: relative; z-index: 1; }
+.page { display: none; }
+.page.active { display: block; animation: pagein 0.3s ease; }
+@keyframes pagein { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+.page-head { margin-bottom: 28px; }
+.breadcrumb { font-family: 'DM Mono', monospace; font-size: 10px; color: rgba(168,255,62,0.5); letter-spacing: 1px; margin-bottom: 6px; }
+.page-title { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; }
+.page-sub { color: var(--muted); font-size: 13px; margin-top: 3px; }
+
+/* ── Cards ── */
+.card {
+  background: var(--glass); border: 1px solid var(--border);
+  border-radius: 18px; backdrop-filter: blur(16px);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  transition: border-color 0.2s;
+}
+.card:hover { border-color: var(--border2); }
+.c-head { padding: 18px 22px 0; }
+.c-label { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+.c-body { padding: 16px 22px 22px; }
+
+/* ── Stat Cards ── */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+.stat {
+  background: var(--glass); border: 1px solid var(--border);
+  border-radius: 16px; padding: 20px;
+  transition: border-color 0.2s, transform 0.2s;
+  position: relative; overflow: hidden;
+}
+.stat:hover { transform: translateY(-2px); border-color: var(--border2); }
+.stat::after {
+  content: ''; position: absolute; top: -40px; right: -40px;
+  width: 100px; height: 100px; border-radius: 50%; opacity: 0.06;
+}
+.stat.s1::after { background: var(--lime); }
+.stat.s2::after { background: var(--cyan); }
+.stat.s3::after { background: var(--warn); }
+.stat.s4::after { background: var(--danger); }
+.stat-lbl { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+.stat-val { font-size: 28px; font-weight: 800; font-family: 'DM Mono', monospace; line-height: 1; }
+.stat-val.lime { color: var(--lime); }
+.stat-val.cyan { color: var(--cyan); }
+.stat-val.warn { color: var(--warn); }
+.stat-val.danger { color: var(--danger); }
+.stat-unit { font-size: 11px; font-weight: 400; color: var(--muted); margin-left: 3px; }
+.stat-tag { font-size: 11px; margin-top: 8px; }
+
+/* ── Meter ── */
+.meter-wrap { text-align: center; padding: 28px 16px; }
+.ring-container { width: 148px; height: 148px; margin: 0 auto 18px; position: relative; display: flex; align-items: center; justify-content: center; }
+.ring-container svg { position: absolute; top: 0; left: 0; transform: rotate(-90deg); }
+.ring-inner { text-align: center; }
+.ring-val { font-size: 36px; font-weight: 800; font-family: 'DM Mono', monospace; line-height: 1; }
+.ring-unit { font-size: 11px; color: var(--muted); }
+.status-chip { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; margin-top: 10px; letter-spacing: 0.3px; }
+.chip-normal { background: rgba(168,255,62,0.12); color: var(--lime); }
+.chip-high { background: rgba(255,184,77,0.12); color: var(--warn); }
+.chip-low { background: rgba(255,92,92,0.15); color: var(--danger); }
+.chip-critical { background: rgba(255,92,92,0.2); color: var(--danger); animation: flash 1s infinite; }
+@keyframes flash { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+/* ── Charts ── */
+.chart-wrap { padding: 0 8px 8px; height: 240px; position: relative; }
+
+/* ── Simulate bar ── */
+.sim-bar {
+  display: flex; align-items: center; justify-content: space-between;
+  background: rgba(168,255,62,0.04); border: 1px solid rgba(168,255,62,0.1);
+  border-radius: 12px; padding: 13px 18px; margin-bottom: 20px;
+}
+.sim-info { font-size: 13px; color: var(--muted); }
+.sim-info strong { color: var(--lime); }
+
+/* ── Buttons ── */
+.btn { padding: 10px 18px; border-radius: 10px; border: none; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 12px; cursor: pointer; transition: all 0.2s; letter-spacing: 0.3px; }
+.btn-lime { background: linear-gradient(135deg, var(--lime), var(--lime2)); color: var(--ink); box-shadow: 0 4px 14px rgba(168,255,62,0.2); }
+.btn-lime:hover { box-shadow: 0 6px 20px rgba(168,255,62,0.35); transform: translateY(-1px); }
+.btn-ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+.btn-ghost:hover { border-color: var(--border2); color: var(--lime); }
+.btn-sm { padding: 8px 14px; font-size: 11px; }
+
+/* ── Input ── */
+.field { margin-bottom: 16px; }
+.field label { display: block; font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 7px; }
+.field input, .field select {
+  width: 100%; padding: 12px 14px;
+  background: rgba(2,12,24,0.9); border: 1px solid var(--border);
+  border-radius: 10px; color: var(--text);
+  font-family: 'Syne', sans-serif; font-size: 14px; outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.field input:focus, .field select:focus { border-color: rgba(168,255,62,0.4); box-shadow: 0 0 0 3px rgba(168,255,62,0.07); }
+.field input::placeholder { color: rgba(61,96,80,0.6); }
+.field select option { background: var(--ink2); }
+
+/* ── Alert items ── */
+.alert-row { display: flex; align-items: flex-start; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--border); }
+.alert-row:last-child { border-bottom: none; }
+.a-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
+.a-dot.crit { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+.a-dot.warn { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+.a-dot.ok { background: var(--lime); }
+.a-text { font-size: 13px; font-weight: 600; }
+.a-time { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--muted); margin-top: 2px; }
+
+/* ── Food table ── */
+.ftable { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ftable th { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); padding: 8px 6px; text-align: left; border-bottom: 1px solid var(--border); font-weight: 500; }
+.ftable td { padding: 11px 6px; border-bottom: 1px solid rgba(168,255,62,0.05); }
+.ftable tr:last-child td { border-bottom: none; }
+
+/* ── Trend bars ── */
+.tbar { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.tbar-label { font-size: 12px; min-width: 100px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tbar-track { flex: 1; height: 7px; background: var(--ink3); border-radius: 4px; overflow: hidden; }
+.tbar-fill { height: 100%; border-radius: 4px; transition: width 0.8s cubic-bezier(0.4,0,0.2,1); }
+.tbar-val { font-size: 11px; font-family: 'DM Mono', monospace; color: var(--muted); min-width: 46px; text-align: right; }
+
+/* ── Suggestions dropdown ── */
+.suggestions {
+  position: absolute; top: 100%; left: 0; right: 0; z-index: 50;
+  background: var(--ink2); border: 1px solid var(--border);
+  border-radius: 10px; max-height: 180px; overflow-y: auto;
+  margin-top: 4px; display: none;
+}
+.sug-item { padding: 10px 14px; font-size: 13px; cursor: pointer; transition: background 0.15s; }
+.sug-item:hover { background: rgba(168,255,62,0.08); }
+.sug-gi { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); float: right; }
+
+/* ── Grid helpers ── */
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.g31 { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; }
+.mb18 { margin-bottom: 18px; }
+
+/* ── Firebase badge ── */
+.fb-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(255,165,0,0.08); border: 1px solid rgba(255,165,0,0.15);
+  border-radius: 8px; padding: 4px 10px;
+  font-family: 'DM Mono', monospace; font-size: 10px; color: #ffaa44;
+}
+
+/* ── Spinner ── */
+.spin { animation: spin 0.8s linear infinite; display: inline-block; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Prediction result ── */
+.pred-big { text-align: center; margin-bottom: 20px; }
+.pred-num { font-size: 54px; font-weight: 800; font-family: 'DM Mono', monospace; line-height: 1; }
+.pred-label { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.risk-badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 11px; font-weight: 700; margin-top: 10px; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(168,255,62,0.2); border-radius: 4px; }
+
+/* Mobile nav toggle */
+.mob-toggle { display: none; }
+
+/* ── Responsive ── */
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; padding: 16px 14px 60px; }
+  .stats { grid-template-columns: 1fr 1fr; }
+  .g31, .g2 { grid-template-columns: 1fr; }
+  .mob-toggle { display: block; position: fixed; bottom: 20px; left: 20px; z-index: 200; background: var(--lime); border: none; border-radius: 50%; width: 48px; height: 48px; cursor: pointer; box-shadow: 0 4px 20px rgba(168,255,62,0.4); }
+}
+</style>
+</head>
+<body>
+<div class="bg-gradient"></div>
+<div class="bg-dots"></div>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">
+      <svg width="20" height="20" viewBox="0 0 36 36" fill="none">
+        <path d="M18 3C18 3 8 10 8 20C8 25.5 12.5 30 18 30C23.5 30 28 25.5 28 20C28 10 18 3 18 3Z" fill="rgba(2,12,24,0.85)"/>
+        <path d="M13.5 20.5 L16.5 23.5 L23 16" stroke="rgba(2,12,24,0.9)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+    <h2>Gluco<span>nova</span></h2>
+  </div>
+
+  <nav>
+    <div class="nav-section">Monitor</div>
+    <a class="nav-link active" data-page="dashboard" onclick="nav('dashboard',this)">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+      Dashboard
+    </a>
+    <a class="nav-link" data-page="food" onclick="nav('food',this)">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10"/><circle cx="12" cy="12" r="3"/></svg>
+      Food Predictor
+    </a>
+    <a class="nav-link" data-page="report" onclick="nav('report',this)">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/></svg>
+      Weekly Report
+    </a>
+    <div class="nav-section">Settings</div>
+    <a class="nav-link" data-page="log" onclick="nav('log',this)">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Log Reading
+    </a>
+  </nav>
+
+  <div class="sidebar-bottom">
+    <div class="user-pill">
+      <div class="avatar" id="s-avatar">G</div>
+      <div>
+        <div class="user-name" id="s-name">Loading…</div>
+        <div class="user-sub">Patient</div>
+      </div>
+      <button class="logout-btn" onclick="doLogout()" title="Sign out">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16,17 21,12 16,7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+      </button>
+    </div>
+  </div>
+</aside>
+
+<!-- Mobile toggle -->
+<button class="mob-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">
+  <svg width="20" height="20" fill="none" stroke="#020c18" stroke-width="2.5" viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+</button>
+
+<main class="main">
+
+  <!-- ── DASHBOARD ── -->
+  <div class="page active" id="page-dashboard">
+    <div class="page-head">
+      <div class="breadcrumb">gluconova / dashboard</div>
+      <div class="page-title">Glucose Dashboard</div>
+      <div class="page-sub">Real-time NIR sensor monitoring & trend analysis</div>
+    </div>
+
+    <div class="sim-bar">
+      <div class="sim-info">
+        <strong>ESP32 Simulator</strong> — Inject test sensor data into Firebase RTDB
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="fb-badge">🔥 Firebase Live</div>
+        <button class="btn btn-ghost btn-sm" id="sim-btn" onclick="simulateReadings()">⚡ Simulate 40 Readings</button>
+      </div>
+    </div>
+
+    <div class="stats mb18">
+      <div class="stat s1">
+        <div class="stat-lbl">Current</div>
+        <div class="stat-val lime" id="d-current">—<span class="stat-unit">mg/dL</span></div>
+        <div class="stat-tag" id="d-status"></div>
+      </div>
+      <div class="stat s2">
+        <div class="stat-lbl">7-Day Avg</div>
+        <div class="stat-val cyan" id="d-avg">—<span class="stat-unit">mg/dL</span></div>
+      </div>
+      <div class="stat s3">
+        <div class="stat-lbl">Time in Range</div>
+        <div class="stat-val warn" id="d-tir">—<span class="stat-unit">%</span></div>
+      </div>
+      <div class="stat s4">
+        <div class="stat-lbl">Total Readings</div>
+        <div class="stat-val danger" id="d-count">—</div>
+      </div>
+    </div>
+
+    <div class="g31 mb18">
+      <div class="card">
+        <div class="c-head" style="display:flex;align-items:center;justify-content:space-between;padding-bottom:14px">
+          <span class="c-label">7-Day Trend</span>
+          <div style="display:flex;gap:14px;font-size:10px;font-family:'DM Mono',monospace;color:var(--muted)">
+            <span style="display:flex;align-items:center;gap:5px"><span style="width:16px;height:2px;background:var(--lime);display:inline-block;border-radius:2px"></span>glucose</span>
+            <span style="display:flex;align-items:center;gap:5px"><span style="width:16px;height:2px;border-top:2px dashed rgba(255,184,77,0.5);display:inline-block"></span>target</span>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="trendChart"></canvas></div>
+      </div>
+
+      <div class="card">
+        <div class="c-head"><div class="c-label">Live Reading</div></div>
+        <div class="meter-wrap">
+          <div class="ring-container">
+            <svg width="148" height="148" viewBox="0 0 148 148">
+              <circle cx="74" cy="74" r="64" fill="none" stroke="var(--ink3)" stroke-width="10"/>
+              <circle cx="74" cy="74" r="64" fill="none" stroke="var(--lime)" stroke-width="10"
+                stroke-dasharray="402" stroke-dashoffset="402" stroke-linecap="round"
+                id="ring-arc" style="transition:stroke-dashoffset 1.2s ease,stroke 0.5s ease"/>
+            </svg>
+            <div class="ring-inner">
+              <div class="ring-val" id="ring-val" style="color:var(--lime)">—</div>
+              <div class="ring-unit">mg/dL</div>
+            </div>
+          </div>
+          <div class="status-chip chip-normal" id="ring-status">Awaiting Data</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px">
+            <div style="background:var(--ink3);border-radius:8px;padding:10px;text-align:center">
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:4px">MIN</div>
+              <div style="font-size:17px;font-weight:800;font-family:'DM Mono',monospace;color:var(--danger)" id="d-min">—</div>
+            </div>
+            <div style="background:var(--ink3);border-radius:8px;padding:10px;text-align:center">
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:4px">MAX</div>
+              <div style="font-size:17px;font-weight:800;font-family:'DM Mono',monospace;color:var(--warn)" id="d-max">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Alerts -->
+    <div class="card">
+      <div class="c-head" style="padding-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+        <div class="c-label">Smart Alerts</div>
+        <button class="btn btn-ghost btn-sm" onclick="loadAlerts()">↻ Refresh</button>
+      </div>
+      <div class="c-body" id="alerts-body">
+        <div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Loading alerts…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FOOD PREDICTOR ── -->
+  <div class="page" id="page-food">
+    <div class="page-head">
+      <div class="breadcrumb">gluconova / food-predictor</div>
+      <div class="page-title">AI Food Impact Predictor</div>
+      <div class="page-sub">Estimate glucose spike before you eat · logged to Firebase</div>
+    </div>
+
+    <div class="g2 mb18">
+      <div class="card">
+        <div class="c-head"><div class="c-label">Predict Impact</div></div>
+        <div class="c-body">
+          <div class="field" style="position:relative">
+            <label>Food Name</label>
+            <input id="f-food" type="text" placeholder="e.g. white rice, banana, dosa…" autocomplete="off" oninput="searchSuggestions(this.value)" onkeydown="if(event.key==='Enter')predictFood()">
+            <div class="suggestions" id="f-sugg"></div>
+          </div>
+          <div class="field">
+            <label>Portion Multiplier</label>
+            <input id="f-portion" type="number" value="1" min="0.1" max="5" step="0.1">
+            <div style="font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);margin-top:5px">1.0 = standard serving · 0.5 = half · 2.0 = double</div>
+          </div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-lime" style="flex:1" onclick="predictFood()">Predict →</button>
+            <button class="btn btn-ghost" onclick="logFood()">Log Meal</button>
+          </div>
+          <div id="f-msg" style="font-size:12px;margin-top:10px;text-align:center;min-height:18px"></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="c-head"><div class="c-label">Result</div></div>
+        <div class="c-body" id="pred-result">
+          <div style="text-align:center;padding:36px 0;color:var(--muted);font-size:13px">
+            <svg width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24" style="margin:0 auto 10px;display:block;opacity:0.35"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+            Enter food name to see prediction
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="c-head" style="padding-bottom:14px;display:flex;align-items:center;justify-content:space-between">
+        <div class="c-label">Recent Food Logs (7 Days)</div>
+        <button class="btn btn-ghost btn-sm" onclick="loadFoodLogs()">↻ Refresh</button>
+      </div>
+      <div class="c-body" id="food-logs">
+        <div style="color:var(--muted);font-size:13px;text-align:center">Loading…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── WEEKLY REPORT ── -->
+  <div class="page" id="page-report">
+    <div class="page-head">
+      <div class="breadcrumb">gluconova / weekly-report</div>
+      <div class="page-title">Weekly Health Report</div>
+      <div class="page-sub">Top impacting foods & personalized dietary insights</div>
+    </div>
+
+    <div class="g2 mb18">
+      <div class="card">
+        <div class="c-head"><div class="c-label">Top Food Impacts</div></div>
+        <div class="c-body" id="rpt-impacts">
+          <div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">Loading…</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="c-head"><div class="c-label">Glucose Stats</div></div>
+        <div class="c-body">
+          <div style="margin-bottom:20px">
+            <div class="tbar">
+              <span class="tbar-label" style="font-size:11px;color:var(--muted)">Time in Range</span>
+              <div class="tbar-track"><div class="tbar-fill" id="tir-bar" style="background:var(--lime);width:0%"></div></div>
+              <span class="tbar-val" id="tir-pct" style="color:var(--lime)">—</span>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+            <div style="background:var(--ink3);border-radius:10px;padding:14px;text-align:center">
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px">AVERAGE</div>
+              <div style="font-size:22px;font-weight:800;font-family:'DM Mono',monospace;color:var(--lime)" id="rpt-avg">—</div>
+              <div style="font-size:10px;color:var(--muted)">mg/dL</div>
+            </div>
+            <div style="background:var(--ink3);border-radius:10px;padding:14px;text-align:center">
+              <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px;margin-bottom:6px">READINGS</div>
+              <div style="font-size:22px;font-weight:800;font-family:'DM Mono',monospace;color:var(--cyan)" id="rpt-count">—</div>
+              <div style="font-size:10px;color:var(--muted)">this week</div>
+            </div>
+          </div>
+          <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px">Recommendations</div>
+          <div id="rpt-tips" style="display:flex;flex-direction:column;gap:8px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="c-head"><div class="c-label">Impact Comparison Chart</div></div>
+      <div style="padding:12px 22px 22px;height:260px"><canvas id="impactChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- ── LOG READING ── -->
+  <div class="page" id="page-log">
+    <div class="page-head">
+      <div class="breadcrumb">gluconova / log-reading</div>
+      <div class="page-title">Log Glucose Reading</div>
+      <div class="page-sub">Manually submit a blood glucose measurement to Firebase</div>
+    </div>
+    <div style="max-width:440px">
+      <div class="card">
+        <div class="c-body" style="padding:30px">
+          <div class="field">
+            <label>Glucose Value (mg/dL)</label>
+            <input id="m-val" type="number" placeholder="95" min="20" max="600" style="font-family:'DM Mono',monospace;font-size:28px;font-weight:700;text-align:center" onkeydown="if(event.key==='Enter')logManual()">
+          </div>
+          <div style="background:var(--ink3);border-radius:10px;padding:14px;margin-bottom:18px;display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px">
+            <div style="color:var(--lime)">🟢 Normal: 70–140</div>
+            <div style="color:var(--warn)">🟡 High: 141–200</div>
+            <div style="color:var(--danger)">⚠ Low: &lt;70</div>
+            <div style="color:var(--danger)">🔴 Critical: &gt;200</div>
+          </div>
+          <div class="field">
+            <label>Source</label>
+            <select id="m-source">
+              <option value="manual">Manual Entry</option>
+              <option value="sensor">ESP32 Sensor</option>
+              <option value="fingerprick">Finger Prick</option>
+            </select>
+          </div>
+          <button class="btn btn-lime" style="width:100%;padding:14px;font-size:14px" onclick="logManual()">Submit to Firebase →</button>
+          <div id="m-msg" style="margin-top:12px;font-size:13px;text-align:center;min-height:18px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import {
+  getDatabase, ref, push, set, get, query,
+  orderByChild, limitToLast, onValue
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyCG3PqejO30BhqJXxbra14WHEukkOMKJLM",
+  authDomain: "gluconova-e0c81.firebaseapp.com",
+  databaseURL: "https://gluconova-e0c81-default-rtdb.firebaseio.com",
+  projectId: "gluconova-e0c81",
+  storageBucket: "gluconova-e0c81.firebasestorage.app",
+  messagingSenderId: "1048165398100",
+  appId: "1:1048165398100:web:3913b713bfa5f72b795fc1"
+});
+const auth = getAuth(app);
+const db = getDatabase(app);
+let uid = null;
+let trendChart, impactChart;
+
+// ── Auth guard ──
+onAuthStateChanged(auth, user => {
+  if (!user) { location.href = 'index.html'; return; }
+  uid = user.uid;
+  const name = user.displayName || user.email.split('@')[0];
+  document.getElementById('s-name').textContent = name;
+  document.getElementById('s-avatar').textContent = name[0].toUpperCase();
+  loadDashboard();
+  setupLiveListener();
+});
+
+window.doLogout = async () => { await signOut(auth); location.href = 'index.html'; };
+
+// ── Navigation ──
+window.nav = (page, el) => {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-link').forEach(n => n.classList.remove('active'));
+  document.getElementById(`page-${page}`).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('sidebar').classList.remove('open');
+  if (page === 'dashboard') loadDashboard();
+  if (page === 'food') loadFoodLogs();
+  if (page === 'report') loadReport();
+};
+
+// ── GI Database ──
+const GI_DB = {
+  "white bread":{gi:75,carbs:50},"brown bread":{gi:50,carbs:45},"white rice":{gi:72,carbs:45},
+  "brown rice":{gi:50,carbs:40},"oatmeal":{gi:55,carbs:27},"cornflakes":{gi:81,carbs:84},
+  "apple":{gi:36,carbs:15},"banana":{gi:51,carbs:23},"orange":{gi:43,carbs:12},
+  "grapes":{gi:59,carbs:17},"watermelon":{gi:76,carbs:8},"mango":{gi:51,carbs:20},
+  "potato":{gi:78,carbs:17},"sweet potato":{gi:63,carbs:20},"pasta":{gi:49,carbs:31},
+  "milk":{gi:39,carbs:5},"yogurt":{gi:36,carbs:6},"ice cream":{gi:57,carbs:28},
+  "chocolate":{gi:40,carbs:60},"coca cola":{gi:63,carbs:39},"orange juice":{gi:50,carbs:10},
+  "pizza":{gi:60,carbs:36},"burger":{gi:66,carbs:35},"french fries":{gi:75,carbs:35},
+  "idli":{gi:50,carbs:39},"dosa":{gi:60,carbs:42},"sambar":{gi:25,carbs:12},
+  "chapati":{gi:52,carbs:38},"dal":{gi:29,carbs:18},"biryani":{gi:58,carbs:45},
+  "poha":{gi:55,carbs:45},"upma":{gi:50,carbs:35},"roti":{gi:52,carbs:38},
+  "egg":{gi:0,carbs:1},"chicken":{gi:0,carbs:0},"fish":{gi:0,carbs:0},
+  "salad":{gi:10,carbs:5},"carrot":{gi:39,carbs:10},"broccoli":{gi:10,carbs:7},
+  "lentils":{gi:32,carbs:20},"chickpeas":{gi:28,carbs:27},"peanuts":{gi:14,carbs:8},
+  "almonds":{gi:0,carbs:6},"honey":{gi:61,carbs:82},"sugar":{gi:65,carbs:100},
+  "cake":{gi:67,carbs:58},"donut":{gi:76,carbs:49},"parotta":{gi:66,carbs:44},
+  "pongal":{gi:58,carbs:40},"vada":{gi:62,carbs:32},"paneer":{gi:10,carbs:3},
+  "curd rice":{gi:48,carbs:35},"rasam":{gi:15,carbs:8},"payasam":{gi:72,carbs:55}
+};
+
+function calcSpike(food, portion) {
+  const key = Object.keys(GI_DB).find(k => food.toLowerCase().includes(k) || k.includes(food.toLowerCase()));
+  const data = key ? GI_DB[key] : {gi:55, carbs:30};
+  const gl = (data.gi * data.carbs * portion) / 100;
+  return { spike: Math.round(gl * 1.5 * 10) / 10, gi: data.gi, carbs: Math.round(data.carbs * portion * 10) / 10 };
+}
+
+// ── Live listener ──
+function setupLiveListener() {
+  const r = query(ref(db, `users/${uid}/glucose`), orderByChild('timestamp'), limitToLast(1));
+  onValue(r, snap => {
+    if (!snap.exists()) return;
+    const entries = Object.values(snap.val());
+    const latest = entries[0];
+    updateMeter(latest.value);
+  });
+}
+
+function updateMeter(val) {
+  const arc = document.getElementById('ring-arc');
+  const rv = document.getElementById('ring-val');
+  const rs = document.getElementById('ring-status');
+  const pct = Math.min(val / 280, 1);
+  arc.setAttribute('stroke-dashoffset', 402 - 402 * pct);
+  let status, color, cls;
+  if (val < 70) { status='⚠ Low Glucose'; color='var(--danger)'; cls='chip-low'; }
+  else if (val <= 140) { status='✓ Normal Range'; color='var(--lime)'; cls='chip-normal'; }
+  else if (val <= 200) { status='↑ Elevated'; color='var(--warn)'; cls='chip-high'; }
+  else { status='‼ Critical High'; color='var(--danger)'; cls='chip-critical'; }
+  arc.style.stroke = color; rv.style.color = color;
+  rv.textContent = val;
+  rs.textContent = status; rs.className = `status-chip ${cls}`;
+  document.getElementById('d-current').innerHTML = `${val}<span class="stat-unit">mg/dL</span>`;
+}
+
+// ── Load dashboard ──
+async function loadDashboard() {
+  await Promise.all([loadStats(), loadTrendChart(), loadAlerts()]);
+}
+
+async function getReadings(days = 7) {
+  const since = Date.now() - days * 86400000;
+  const snap = await get(query(ref(db, `users/${uid}/glucose`), orderByChild('timestamp'), limitToLast(500)));
+  if (!snap.exists()) return [];
+  return Object.values(snap.val()).filter(r => r.timestamp >= since).sort((a, b) => a.timestamp - b.timestamp);
+}
+
+async function loadStats() {
+  const readings = await getReadings(7);
+  if (!readings.length) return;
+  const vals = readings.map(r => r.value);
+  const avg = Math.round(vals.reduce((a,b) => a+b, 0) / vals.length * 10) / 10;
+  const min = Math.min(...vals);
+  const max = Math.max(...vals);
+  const tir = Math.round(vals.filter(v => v >= 70 && v <= 140).length / vals.length * 1000) / 10;
+  document.getElementById('d-avg').innerHTML = `${avg}<span class="stat-unit">mg/dL</span>`;
+  document.getElementById('d-tir').innerHTML = `${tir}<span class="stat-unit">%</span>`;
+  document.getElementById('d-count').textContent = vals.length;
+  document.getElementById('d-min').textContent = min;
+  document.getElementById('d-max').textContent = max;
+  document.getElementById('tir-bar').style.width = tir + '%';
+  document.getElementById('tir-pct').textContent = tir + '%';
+  document.getElementById('rpt-avg').textContent = avg;
+  document.getElementById('rpt-count').textContent = vals.length;
+  updateMeter(vals[vals.length - 1]);
+}
+
+async function loadTrendChart() {
+  const readings = await getReadings(7);
+  const labels = readings.map(r => {
+    const d = new Date(r.timestamp);
+    return d.toLocaleDateString('en', {month:'short', day:'numeric'});
+  });
+  const values = readings.map(r => r.value);
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  if (trendChart) trendChart.destroy();
+  trendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Glucose', data: values,
+        borderColor: '#a8ff3e',
+        backgroundColor: 'rgba(168,255,62,0.05)',
+        borderWidth: 2, tension: 0.4, fill: true,
+        pointRadius: readings.length > 40 ? 0 : 3,
+        pointBackgroundColor: '#a8ff3e'
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: {display: false},
+        tooltip: {
+          backgroundColor: '#061426', borderColor: 'rgba(168,255,62,0.25)', borderWidth: 1,
+          titleColor: '#3d6050', bodyColor: '#d4ecc8',
+          callbacks: {label: ctx => ` ${ctx.parsed.y} mg/dL`}
+        }
+      },
+      scales: {
+        x: {
+          ticks: {color:'#3d6050', maxTicksLimit:7, font:{family:'DM Mono', size:10}},
+          grid: {color:'rgba(168,255,62,0.04)'}, border: {color:'transparent'}
+        },
+        y: {
+          min:40, max:280,
+          ticks: {color:'#3d6050', font:{family:'DM Mono', size:10}},
+          grid: {color:'rgba(168,255,62,0.05)'}, border: {color:'transparent'}
+        }
+      }
+    }
+  });
+}
+
+async function loadAlerts() {
+  const readings = await getReadings(1);
+  const container = document.getElementById('alerts-body');
+  const alerts = [];
+  readings.slice(-20).forEach(r => {
+    if (r.value < 70) alerts.push({type:'crit', msg:`Low glucose detected: ${r.value} mg/dL`, ts: r.timestamp});
+    else if (r.value > 200) alerts.push({type:'crit', msg:`Critical high: ${r.value} mg/dL`, ts: r.timestamp});
+    else if (r.value > 140) alerts.push({type:'warn', msg:`Elevated glucose: ${r.value} mg/dL`, ts: r.timestamp});
+  });
+  if (!alerts.length) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">✓ No alerts — all readings in safe range</div>';
+    return;
+  }
+  container.innerHTML = alerts.slice(0,5).map(a => `
+    <div class="alert-row">
+      <div class="a-dot ${a.type}"></div>
+      <div>
+        <div class="a-text">${a.msg}</div>
+        <div class="a-time">${new Date(a.ts).toLocaleString()}</div>
+      </div>
+    </div>`).join('');
+}
+
+window.loadAlerts = loadAlerts;
+
+// ── Simulate ──
+window.simulateReadings = async () => {
+  const btn = document.getElementById('sim-btn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin">⟳</span> Simulating…';
+  const now = Date.now();
+  const writes = [];
+  for (let i = 0; i < 40; i++) {
+    const noise = (Math.random() - 0.5) * 16;
+    const wave = 18 * Math.sin(i * 0.32);
+    const val = Math.max(62, Math.min(270, 96 + noise + wave));
+    const r = ref(db, `users/${uid}/glucose`);
+    writes.push(push(r, {
+      value: Math.round(val * 10) / 10,
+      source: 'simulated',
+      timestamp: now - (40 - i) * 3600000
+    }));
+  }
+  await Promise.all(writes);
+  await loadDashboard();
+  btn.textContent = '✓ Done!';
+  setTimeout(() => { btn.disabled = false; btn.textContent = '⚡ Simulate 40 Readings'; }, 2200);
+};
+
+// ── Food ──
+window.searchSuggestions = (q) => {
+  const box = document.getElementById('f-sugg');
+  if (q.length < 2) { box.style.display = 'none'; return; }
+  const matches = Object.keys(GI_DB).filter(k => k.includes(q.toLowerCase())).slice(0, 8);
+  if (!matches.length) { box.style.display = 'none'; return; }
+  box.style.display = 'block';
+  box.innerHTML = matches.map(k => `<div class="sug-item" onclick="selectFood('${k}')"><span class="sug-gi">GI:${GI_DB[k].gi}</span>${k}</div>`).join('');
+};
+
+window.selectFood = (name) => {
+  document.getElementById('f-food').value = name;
+  document.getElementById('f-sugg').style.display = 'none';
+};
+
+window.predictFood = () => {
+  const food = document.getElementById('f-food').value.trim();
+  const portion = parseFloat(document.getElementById('f-portion').value) || 1;
+  if (!food) return;
+  const {spike, gi, carbs} = calcSpike(food, portion);
+  const risk = spike > 40 ? 'HIGH' : spike > 20 ? 'MODERATE' : 'LOW';
+  const riskColor = spike > 40 ? 'var(--danger)' : spike > 20 ? 'var(--warn)' : 'var(--lime)';
+  const riskBg = spike > 40 ? 'rgba(255,92,92,0.12)' : spike > 20 ? 'rgba(255,184,77,0.12)' : 'rgba(168,255,62,0.1)';
+  const rec = gi < 30 ? '✓ Excellent choice — very low glycemic impact.' : gi < 55 ? '✓ Good choice — moderate impact, safe for most.' : gi < 70 ? '⚠ Pair with protein or fiber to reduce spike.' : '⚠ High GI food — limit portion and combine with low-GI foods.';
+  document.getElementById('pred-result').innerHTML = `
+    <div class="pred-big">
+      <div style="font-family:'DM Mono',monospace;font-size:11px;color:var(--muted);margin-bottom:6px">PREDICTED SPIKE</div>
+      <div class="pred-num" style="color:${riskColor}">+${spike}</div>
+      <div class="pred-label">mg/dL above baseline</div>
+      <div class="risk-badge" style="background:${riskBg};color:${riskColor}">${risk} RISK</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+      ${[['GI Score', gi, 'var(--cyan)'],['Net Carbs', carbs+'g', 'var(--warn)'],['Portion', portion+'×', 'var(--lime)']].map(([l,v,c]) => `
+        <div style="background:var(--ink3);border-radius:8px;padding:10px;text-align:center">
+          <div style="font-family:'DM Mono',monospace;font-size:9px;color:var(--muted);letter-spacing:1px">${l}</div>
+          <div style="font-size:18px;font-weight:800;font-family:'DM Mono',monospace;color:${c};margin-top:4px">${v}</div>
+        </div>`).join('')}
+    </div>
+    <div style="background:rgba(168,255,62,0.04);border:1px solid rgba(168,255,62,0.1);border-radius:10px;padding:12px;font-size:13px">${rec}</div>`;
+};
+
+window.logFood = async () => {
+  const food = document.getElementById('f-food').value.trim();
+  const portion = parseFloat(document.getElementById('f-portion').value) || 1;
+  const msg = document.getElementById('f-msg');
+  if (!food) { msg.style.color='var(--danger)'; msg.textContent='Enter a food name first.'; return; }
+  const {spike, gi} = calcSpike(food, portion);
+  await push(ref(db, `users/${uid}/foodLogs`), {
+    food, portion, predictedSpike: spike, gi,
+    timestamp: Date.now()
+  });
+  msg.style.color = 'var(--lime)'; msg.textContent = `✓ "${food}" logged to Firebase!`;
+  setTimeout(() => msg.textContent = '', 3000);
+  loadFoodLogs();
+};
+
+window.loadFoodLogs = async () => {
+  const since = Date.now() - 7 * 86400000;
+  const snap = await get(query(ref(db, `users/${uid}/foodLogs`), orderByChild('timestamp'), limitToLast(30)));
+  const container = document.getElementById('food-logs');
+  if (!snap.exists()) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">No food logs yet.</div>';
+    return;
+  }
+  const logs = Object.values(snap.val()).filter(l => l.timestamp >= since).reverse();
+  container.innerHTML = `
+    <div style="overflow-x:auto">
+    <table class="ftable">
+      <thead><tr>
+        <th>Food</th><th>Portion</th><th>GI</th><th>Predicted Spike</th><th>Logged</th>
+      </tr></thead>
+      <tbody>${logs.map(l => {
+        const c = l.predictedSpike > 40 ? 'var(--danger)' : l.predictedSpike > 20 ? 'var(--warn)' : 'var(--lime)';
+        return `<tr>
+          <td style="font-weight:600">${l.food}</td>
+          <td style="font-family:'DM Mono',monospace;color:var(--muted)">${l.portion}×</td>
+          <td style="font-family:'DM Mono',monospace">${l.gi}</td>
+          <td style="font-family:'DM Mono',monospace;font-weight:700;color:${c}">+${l.predictedSpike}</td>
+          <td style="font-family:'DM Mono',monospace;font-size:10px;color:var(--muted)">${new Date(l.timestamp).toLocaleDateString()}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+};
+
+// ── Report ──
+async function loadReport() {
+  await loadStats();
+  const since = Date.now() - 7 * 86400000;
+  const snap = await get(query(ref(db, `users/${uid}/foodLogs`), orderByChild('timestamp'), limitToLast(100)));
+  const container = document.getElementById('rpt-impacts');
+  if (!snap.exists()) {
+    container.innerHTML = '<div style="color:var(--muted);font-size:13px;text-align:center;padding:16px">No food data yet.</div>';
+    return;
+  }
+  const logs = Object.values(snap.val()).filter(l => l.timestamp >= since);
+  const map = {};
+  logs.forEach(l => {
+    const k = l.food.toLowerCase();
+    if (!map[k]) map[k] = {food: l.food, count: 0, total: 0, gi: l.gi};
+    map[k].count++; map[k].total += l.predictedSpike || 0;
+  });
+  const sorted = Object.values(map).sort((a,b) => (b.total/b.count) - (a.total/a.count));
+  const maxSpike = Math.max(...sorted.map(s => s.total / s.count));
+  container.innerHTML = sorted.slice(0,8).map(item => {
+    const avg = Math.round(item.total / item.count * 10) / 10;
+    const pct = maxSpike > 0 ? (avg / maxSpike) * 100 : 0;
+    const color = avg > 40 ? 'var(--danger)' : avg > 20 ? 'var(--warn)' : 'var(--lime)';
+    return `<div class="tbar">
+      <span class="tbar-label" title="${item.food}">${item.food.length > 14 ? item.food.slice(0,14)+'…' : item.food}</span>
+      <div class="tbar-track"><div class="tbar-fill" style="background:${color};width:${pct}%"></div></div>
+      <span class="tbar-val" style="color:${color}">+${avg}</span>
+    </div>`;
+  }).join('');
+
+  const top = sorted.slice(0, 6);
+  const ctx = document.getElementById('impactChart').getContext('2d');
+  if (impactChart) impactChart.destroy();
+  impactChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: top.map(i => i.food),
+      datasets: [{
+        label: 'Avg Spike',
+        data: top.map(i => Math.round(i.total/i.count * 10)/10),
+        backgroundColor: top.map(i => {
+          const avg = i.total/i.count;
+          return avg > 40 ? 'rgba(255,92,92,0.65)' : avg > 20 ? 'rgba(255,184,77,0.65)' : 'rgba(168,255,62,0.65)';
+        }),
+        borderRadius: 6, borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend:{display:false}, tooltip:{backgroundColor:'#061426', borderColor:'rgba(168,255,62,0.2)', borderWidth:1, bodyColor:'#d4ecc8'} },
+      scales: {
+        x: {ticks:{color:'#3d6050', font:{family:'Syne', size:11}}, grid:{display:false}, border:{color:'transparent'}},
+        y: {ticks:{color:'#3d6050', font:{family:'DM Mono', size:10}}, grid:{color:'rgba(168,255,62,0.04)'}, border:{color:'transparent'}}
+      }
+    }
+  });
+
+  const tips = [];
+  if (sorted[0]?.total/sorted[0]?.count > 40) tips.push(`⚠ "${sorted[0].food}" causes high spikes — reduce frequency.`);
+  tips.push('🥗 Pair high-GI foods with fiber or protein to blunt spikes.');
+  tips.push('💧 Hydration helps stabilize blood glucose levels.');
+  tips.push('🚶 A 10-min walk after meals can reduce post-meal spikes by 20%.');
+  document.getElementById('rpt-tips').innerHTML = tips.map(t => `<div style="background:var(--ink3);border-radius:8px;padding:11px;font-size:12px">${t}</div>`).join('');
+}
+
+// ── Manual log ──
+window.logManual = async () => {
+  const val = parseFloat(document.getElementById('m-val').value);
+  const source = document.getElementById('m-source').value;
+  const msg = document.getElementById('m-msg');
+  if (!val || val < 20 || val > 600) { msg.style.color='var(--danger)'; msg.textContent='Enter a valid value (20–600).'; return; }
+  await push(ref(db, `users/${uid}/glucose`), { value: val, source, timestamp: Date.now() });
+  msg.style.color = 'var(--lime)'; msg.textContent = '✓ Reading saved to Firebase!';
+  document.getElementById('m-val').value = '';
+  setTimeout(() => msg.textContent = '', 3000);
+  loadStats();
+};
+
+// Close suggestions on outside click
+document.addEventListener('click', e => {
+  if (!e.target.closest('.field')) document.getElementById('f-sugg').style.display = 'none';
+});
+</script>
+</body>
+</html>

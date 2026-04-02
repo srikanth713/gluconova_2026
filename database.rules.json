@@ -1,0 +1,23 @@
+{
+  "rules": {
+    "users": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid",
+        "profile": {
+          ".validate": "newData.hasChildren(['name', 'email', 'createdAt'])"
+        },
+        "glucose": {
+          "$readingId": {
+            ".validate": "newData.hasChildren(['value', 'timestamp']) && newData.child('value').isNumber() && newData.child('value').val() >= 20 && newData.child('value').val() <= 600"
+          }
+        },
+        "foodLogs": {
+          "$logId": {
+            ".validate": "newData.hasChildren(['food', 'timestamp'])"
+          }
+        }
+      }
+    }
+  }
+}
